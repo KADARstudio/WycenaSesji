@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kalkulator Wycen Sesji i Kosztów</title>
+  <!-- Import czcionki Montserrat -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+  <!-- Import Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Global styles */
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background-color: #eef2f5;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background-color: #fff;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+    }
+    /* Language Selector */
+    #languageSelector {
+      float: right;
+      padding: 5px;
+      margin-top: -40px;
+    }
+    /* Tab menu */
+    ul.tab-menu {
+      list-style: none;
+      padding: 0;
+      margin: 20px 0;
+      display: flex;
+      border-bottom: 2px solid #ccc;
+    }
+    ul.tab-menu li {
+      margin-right: 20px;
+      padding: 10px 15px;
+      cursor: pointer;
+      color: #555;
+    }
+    ul.tab-menu li.active {
+      border-bottom: 3px solid #e63946;
+      font-weight: bold;
+      color: #e63946;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    /* Headings and labels */
+    h1, h2 {
+      color: #e63946;
+    }
+    h2 {
+      margin-bottom: 15px;
+      font-size: 1.8em;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+    }
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1em;
+    }
+    /* Range sliders */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+      margin-top: 5px;
+    }
+    input[type="range"]:focus {
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 8px;
+      cursor: pointer;
+      background: #d1d1d1;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      border: 1px solid #e63946;
+      height: 24px;
+      width: 24px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -8px;
+      box-shadow: 0px 2px 6px rgba(0,0,0,0.3);
+      transition: background 0.3s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: #f8f8f8;
+    }
+    input[type="range"]::-moz-range-track {
+      width: 100%;
+      height: 8px;
+      cursor: pointer;
+      background: #d1d1d1;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    input[type="range"]::-moz-range-thumb {
+      border: 1px solid #e63946;
+      height: 24px;
+      width: 24px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      box-shadow: 0px 2px 6px rgba(0,0,0,0.3);
+      transition: background 0.3s ease;
+    }
+    input[type="range"]::-moz-range-thumb:hover {
+      background: #f8f8f8;
+    }
+    /* Button styles */
+    button {
+      background-color: #e63946;
+      color: #fff;
+      border: none;
+      padding: 15px 25px;
+      border-radius: 50px;
+      font-size: 1.1em;
+      margin-top: 30px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      display: inline-block;
+    }
+    button:hover {
+      background-color: #d62828;
+    }
+    /* Link button style for calendar */
+    #calendarButton {
+      background-color: #3498db;
+      color: #fff;
+      text-decoration: none;
+      padding: 15px 25px;
+      border-radius: 50px;
+      font-size: 1.1em;
+      margin-top: 30px;
+      display: inline-block;
+    }
+    #calendarButton:hover {
+      background-color: #2980b9;
+    }
+    /* Result Box */
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      background-color: #e7f4e4;
+      border: 1px solid #8bc34a;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 1.2em;
+    }
+    .result p {
+      margin: 10px 0;
+    }
+    /* Display for range values */
+    .range-display {
+      font-weight: normal;
+      font-size: 0.9em;
+      color: #555;
+    }
+    /* Tooltip styling */
+    .tooltip {
+      cursor: help;
+      color: #e63946;
+      margin-left: 5px;
+    }
+    
+    /* Responsywność – reguły dla urządzeń mobilnych */
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px;
+        margin: 10px;
+      }
+      ul.tab-menu {
+        flex-direction: column;
+      }
+      ul.tab-menu li {
+        margin-right: 0;
+        margin-bottom: 10px;
+      }
+      button, #calendarButton {
+        width: 100%;
+        text-align: center;
+      }
+      #languageSelector {
+        float: none;
+        display: block;
+        margin: 10px auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="hero" style="text-align:center; margin-bottom:30px; position:relative;">
+      <h1>📸 Kalkulator Wycen Sesji i Kosztów</h1>
+      <p>
+        Oblicz wycenę sesji oraz dowiedz się, ile sesji musisz wykonać, aby pokryć wszystkie koszty.<br>
+        Wszystkie kwoty podawane są w PLN; ceny sesji wyliczane są jako brutto i netto.
+      </p>
+      <!-- Selektor języków -->
+      <select id="languageSelector">
+        <option value="pl">Polski</option>
+        <option value="en">English</option>
+      </select>
+    </header>
+    
+    <!-- Tab Menu – używamy atrybutu data-tab -->
+    <ul class="tab-menu">
+      <li class="active" data-tab="tab-sesja">Sesja</li>
+      <li data-tab="tab-koszty-dzialalnosci">Koszty Działalności</li>
+      <li data-tab="tab-koszty-zycia">Koszty Życia</li>
+      <li data-tab="tab-podsumowanie">Podsumowanie</li>
+    </ul>
+    
+    <!-- Formularz -->
+    <form id="pricingForm">
+      <!-- Tab: Sesja -->
+      <div id="tab-sesja" class="tab-content active">
+        <h2>📸 Dane sesji zdjęciowej</h2>
+        <div class="form-group">
+          <label for="sessionType">Rodzaj sesji</label>
+          <select id="sessionType" name="sessionType" required>
+            <option value="portrait">Portret</option>
+            <option value="wedding">Ślub</option>
+            <option value="event">Event</option>
+            <option value="product">Produktowa</option>
+            <option value="fashion">Modowa</option>
+            <option value="family">Rodzinne zdjęcia</option>
+            <option value="culinary">Kulinarna</option>
+            <option value="real-estate">Nieruchomości</option>
+            <option value="corporate">Korporacyjna</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="locationType">Lokalizacja sesji</label>
+          <select id="locationType" name="locationType" required>
+            <option value="studio">Studio</option>
+            <option value="outdoor">Plener</option>
+            <option value="rental">Wynajęta lokalizacja</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="travelCost">Koszt dojazdu (PLN) <span class="range-display" id="travelCostDisplay">0</span></label>
+          <input type="range" id="travelCost" name="travelCost" min="0" max="500" step="10" value="0">
+        </div>
+        <div class="form-group">
+          <label for="rentalCost">Opłata za wynajem przestrzeni (PLN) <span class="range-display" id="rentalCostDisplay">0</span></label>
+          <input type="range" id="rentalCost" name="rentalCost" min="0" max="2000" step="50" value="0">
+        </div>
+        <div class="form-group">
+          <label for="numberShots">Ilość ujęć / sesji <span class="range-display" id="numberShotsDisplay">10</span></label>
+          <input type="range" id="numberShots" name="numberShots" min="1" max="100" step="1" value="10">
+        </div>
+        <div class="form-group">
+          <label for="numberPhotos">Liczba zdjęć do dostarczenia <span class="range-display" id="numberPhotosDisplay">30</span></label>
+          <input type="range" id="numberPhotos" name="numberPhotos" min="1" max="500" step="1" value="30">
+        </div>
+        <div class="form-group">
+          <label for="postProduction">Zakres postprodukcji</label>
+          <select id="postProduction" name="postProduction" required>
+            <option value="basic">Podstawowy</option>
+            <option value="advanced">Zaawansowany</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="additionalServices">Dodatkowe usługi (PLN) <span class="range-display" id="additionalServicesDisplay">0</span></label>
+          <input type="range" id="additionalServices" name="additionalServices" min="0" max="2000" step="50" value="0">
+        </div>
+        <div class="form-group">
+          <label for="equipmentCost">Koszt amortyzacji sprzętu (PLN) <span class="range-display" id="equipmentCostDisplay">100</span></label>
+          <input type="range" id="equipmentCost" name="equipmentCost" min="0" max="1000" step="20" value="100">
+        </div>
+        <div class="form-group">
+          <label for="materialsCost">Koszt materiałów dodatkowych (PLN) <span class="range-display" id="materialsCostDisplay">150</span></label>
+          <input type="range" id="materialsCost" name="materialsCost" min="0" max="1000" step="20" value="150">
+        </div>
+        <div class="form-group">
+          <label for="rights">Prawa autorskie i licencje</label>
+          <select id="rights" name="rights" required>
+            <option value="private">Użytek prywatny</option>
+            <option value="commercial">Komercyjny</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="city">Miasto (dla sesji) – wybierz kategorię</label>
+          <select id="city" name="city" required>
+            <option value="very-small">Bardzo małe</option>
+            <option value="small">Małe</option>
+            <option value="medium">Średnie</option>
+            <option value="large">Duże</option>
+            <option value="very-large">Bardzo duże</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Tab: Koszty Działalności -->
+      <div id="tab-koszty-dzialalnosci" class="tab-content">
+        <h2>💼 Koszty Działalności i Dane Firmy</h2>
+        <div class="form-group">
+          <label for="cityBusiness">Miasto prowadzenia działalności</label>
+          <select id="cityBusiness" name="cityBusiness" required>
+            <option value="very-small">Bardzo małe</option>
+            <option value="small">Małe</option>
+            <option value="medium">Średnie</option>
+            <option value="large">Duże</option>
+            <option value="very-large">Bardzo duże</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="businessTypeBusiness">Forma działalności</label>
+          <select id="businessTypeBusiness" name="businessTypeBusiness" required>
+            <option value="JDG">JDG</option>
+            <option value="dn">Działalność nierejestrowana</option>
+            <option value="sp_cywilna">Spółka cywilna</option>
+            <option value="sp_zoo">Spółka z o.o.</option>
+            <option value="zlecenie">Umowa zlecenie</option>
+            <option value="dzieło">Umowa o dzieło</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="taxationBusiness">Forma opodatkowania</label>
+          <select id="taxationBusiness" name="taxationBusiness">
+            <option value="ryczalt">Ryczałt</option>
+            <option value="liniowy">Podatek liniowy</option>
+            <option value="skala">Skala podatkowa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="zusMonthly">Miesięczny ZUS (PLN) <span class="tooltip" data-tooltip="To jest podpowiedź dla tego pola.">(?)</span></label>
+          <input type="number" id="zusMonthly" name="zusMonthly" value="0">
+        </div>
+        <div class="form-group">
+          <label for="accountantFee">Wynajem księgowego (PLN)</label>
+          <input type="number" id="accountantFee" name="accountantFee" value="0">
+        </div>
+        <div class="form-group">
+          <label for="subscriptions">Subskrypcje programów (PLN)</label>
+          <input type="number" id="subscriptions" name="subscriptions" value="0">
+        </div>
+        <div class="form-group">
+          <label for="equipmentAmortization">Amortyzacja sprzętu (PLN)</label>
+          <input type="number" id="equipmentAmortization" name="equipmentAmortization" value="0">
+        </div>
+        <div class="form-group">
+          <label for="otherBusinessCosts">Inne koszty działalności (PLN)</label>
+          <input type="number" id="otherBusinessCosts" name="otherBusinessCosts" value="0">
+        </div>
+        <div class="form-group">
+          <label for="experienceYearsBusiness">Doświadczenie (lata) <span class="range-display" id="experienceBusinessDisplay">5</span></label>
+          <input type="range" id="experienceYearsBusiness" name="experienceYearsBusiness" min="0" max="40" step="1" value="5">
+        </div>
+      </div>
+      
+      <!-- Tab: Koszty Życia -->
+      <div id="tab-koszty-zycia" class="tab-content">
+        <h2>🏠 Koszty Życia</h2>
+        <div class="form-group">
+          <label for="rentCost">Wynajem mieszkania / rata kredytu (PLN)</label>
+          <input type="number" id="rentCost" name="rentCost" value="0">
+        </div>
+        <div class="form-group">
+          <label for="fuelCost">Paliwo (PLN)</label>
+          <input type="number" id="fuelCost" name="fuelCost" value="0">
+        </div>
+        <div class="form-group">
+          <label for="foodCost">Jedzenie (PLN)</label>
+          <input type="number" id="foodCost" name="foodCost" value="0">
+        </div>
+        <div class="form-group">
+          <label for="entertainmentCost">Przyjemności (PLN)</label>
+          <input type="number" id="entertainmentCost" name="entertainmentCost" value="0">
+        </div>
+        <div class="form-group">
+          <label for="billsCost">Rachunki (PLN)</label>
+          <input type="number" id="billsCost" name="billsCost" value="0">
+        </div>
+        <div class="form-group">
+          <label for="otherLivingCosts">Inne koszty życia (PLN)</label>
+          <input type="number" id="otherLivingCosts" name="otherLivingCosts" value="0">
+        </div>
+      </div>
+      
+      <!-- Tab: Podsumowanie -->
+      <div id="tab-podsumowanie" class="tab-content">
+        <h2>📊 Podsumowanie</h2>
+        <!-- Przyciski: Oblicz, Zapisz, Wczytaj, Eksport oraz link do Google Calendar -->
+        <button type="button" id="calculateButton">Oblicz wycenę</button>
+        <button type="button" id="saveButton">Zapisz dane</button>
+        <button type="button" id="loadButton">Wczytaj dane</button>
+        <button type="button" id="exportButton">Eksportuj do CSV</button>
+        <a href="https://calendar.google.com/calendar/u/0/r/eventedit" target="_blank" id="calendarButton">Zaplanuj sesję w Google Calendar</a>
+        <div class="result" id="result" style="display:none;">
+          <h2 id="resultTitle">Wynik wyceny</h2>
+          <p id="sessionResult"></p>
+          <p id="monthlyCostsResult"></p>
+          <p id="breakEvenResult"></p>
+        </div>
+        <!-- Wykresy -->
+        <canvas id="chartSessionBreakdown" style="max-width:400px; margin:20px auto;"></canvas>
+        <canvas id="chartMonthlyCosts" style="max-width:400px; margin:20px auto;"></canvas>
+        <canvas id="chartMonthlyBar" style="max-width:400px; margin:20px auto;"></canvas>
+      </div>
+    </form>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Global variables for charts and ostatnie wyniki obliczeń
+      let chartSessionBreakdown, chartMonthlyCosts, chartMonthlyBar;
+      let lastTotalGrossSession = null;
+      let lastTotalNetSession = null;
+      let lastTotalMonthlyCosts = null;
+      let lastBreakEvenSessions = null;
+      
+      // Tłumaczenia dla obsługi języków
+      const translations = {
+        pl: {
+          sessionResult: "Wycena sesji: brutto",
+          monthlyCostsResult: "Łączne miesięczne koszty (netto):",
+          breakEvenResult: "Sesji potrzebnych do pokrycia kosztów:"
+        },
+        en: {
+          sessionResult: "Session estimate: gross",
+          monthlyCostsResult: "Total monthly costs (net):",
+          breakEvenResult: "Sessions needed to cover costs:"
+        }
+      };
+      
+      // Funkcja przełączania zakładek
+      window.openTab = function(tabName) {
+        document.querySelectorAll(".tab-content").forEach(function(tab) {
+          tab.classList.remove("active");
+        });
+        document.getElementById(tabName).classList.add("active");
+        
+        document.querySelectorAll("ul.tab-menu li").forEach(function(item) {
+          item.classList.remove("active");
+        });
+        // Dodaj klasę active do elementu, który ma data-tab równy tabName
+        document.querySelector('ul.tab-menu li[data-tab="' + tabName + '"]').classList.add("active");
+      };
+      
+      // Dodanie obsługi kliknięć i touch dla zakładek
+      document.querySelectorAll("ul.tab-menu li").forEach(function(li) {
+        li.addEventListener('click', function(e) {
+          let tab = li.getAttribute('data-tab');
+          openTab(tab);
+        });
+        li.addEventListener('touchstart', function(e) {
+          let tab = li.getAttribute('data-tab');
+          openTab(tab);
+        });
+      });
+      
+      // Uniwersalny listener dla pól typu range – aktualizuje element wyświetlający wartość
+      document.querySelectorAll('input[type="range"]').forEach(function(rangeInput) {
+        rangeInput.addEventListener('input', function() {
+          let display = document.getElementById(rangeInput.id + "Display");
+          if (display) display.innerText = rangeInput.value;
+        });
+      });
+      
+      // Walidacja pól liczbowych (nie mniejsze od 0)
+      document.querySelectorAll('input[type="number"]').forEach(function(input) {
+        input.addEventListener('input', function() {
+          if(isNaN(this.value) || Number(this.value) < 0) {
+            alert("Proszę wprowadzić poprawną liczbę (większą lub równą 0).");
+            this.value = 0;
+          }
+        });
+      });
+      
+      // Funkcja walidująca pola wymagane
+      function validateForm() {
+        let isValid = true;
+        document.querySelectorAll('[required]').forEach(function(field) {
+          if (!field.value) {
+            isValid = false;
+            field.style.border = '1px solid red';
+          } else {
+            field.style.border = '';
+          }
+        });
+        if (!isValid) {
+          alert("Proszę wypełnić wszystkie wymagane pola.");
+        }
+        return isValid;
+      }
+      
+      // Funkcja obliczająca wycenę
+      function calculateAll() {
+        const currentLang = document.getElementById('languageSelector').value;
+        
+        // --- Dane z zakładki Sesja ---
+        const sessionType = document.getElementById("sessionType").value;
+        let baseRate = 0;
+        switch(sessionType) {
+          case "portrait": baseRate = 300; break;
+          case "wedding": baseRate = 1500; break;
+          case "event": baseRate = 500; break;
+          case "product": baseRate = 400; break;
+          case "fashion": baseRate = 600; break;
+          case "family": baseRate = 350; break;
+          case "culinary": baseRate = 450; break;
+          case "real-estate": baseRate = 700; break;
+          case "corporate": baseRate = 800; break;
+          default: baseRate = 300;
+        }
+        
+        let sessionMultiplier = 1.0;
+        switch(sessionType) {
+          case "portrait": sessionMultiplier = 1.0; break;
+          case "wedding": sessionMultiplier = 0.8; break;
+          case "event": sessionMultiplier = 1.0; break;
+          case "product": sessionMultiplier = 1.9; break;
+          case "fashion": sessionMultiplier = 1.3; break;
+          case "family": sessionMultiplier = 0.9; break;
+          case "culinary": sessionMultiplier = 1.7; break;
+          case "real-estate": sessionMultiplier = 1.2; break;
+          case "corporate": sessionMultiplier = 1.4; break;
+          default: sessionMultiplier = 1.0;
+        }
+        
+        const locationType = document.getElementById("locationType").value;
+        const travelCost = parseFloat(document.getElementById("travelCost").value) || 0;
+        const rentalCost = parseFloat(document.getElementById("rentalCost").value) || 0;
+        const numberShots = parseFloat(document.getElementById("numberShots").value) || 0;
+        const numberPhotos = parseFloat(document.getElementById("numberPhotos").value) || 0;
+        const postProduction = document.getElementById("postProduction").value;
+        const additionalServices = parseFloat(document.getElementById("additionalServices").value) || 0;
+        const equipmentCost = parseFloat(document.getElementById("equipmentCost").value) || 0;
+        const materialsCost = parseFloat(document.getElementById("materialsCost").value) || 0;
+        const rights = document.getElementById("rights").value;
+        
+        let costBase = baseRate;
+        let costZdjecia = numberPhotos * 5;
+        let costUjecia = numberShots * 20;
+        let costPost = (postProduction === "advanced") ? 200 : 0;
+        let costTransport = travelCost;
+        let costLokalizacjaExtra = 0;
+        if (locationType === "rental") { costLokalizacjaExtra = 100; }
+        if (locationType === "outdoor") { costLokalizacjaExtra = 50; }
+        let costDodatkowe = additionalServices;
+        let costSprzet = equipmentCost;
+        let costMaterialy = materialsCost;
+        
+        const city = document.getElementById("city").value;
+        let cityMultiplier = 1;
+        switch(city) {
+          case "very-small": cityMultiplier = 1.0; break;
+          case "small": cityMultiplier = 1.1; break;
+          case "medium": cityMultiplier = 1.2; break;
+          case "large": cityMultiplier = 1.3; break;
+          case "very-large": cityMultiplier = 1.4; break;
+        }
+        
+        let rawSessionCost = costBase + costZdjecia + costUjecia + costPost + costTransport + costLokalizacjaExtra + costDodatkowe + costSprzet + costMaterialy;
+        let sessionCostCalc = rawSessionCost * sessionMultiplier;
+        
+        // --- Dane z zakładki Koszty Działalności ---
+        const zusMonthly = parseFloat(document.getElementById("zusMonthly").value) || 0;
+        const accountantFee = parseFloat(document.getElementById("accountantFee").value) || 0;
+        const subscriptions = parseFloat(document.getElementById("subscriptions").value) || 0;
+        const equipmentAmortization = parseFloat(document.getElementById("equipmentAmortization").value) || 0;
+        const otherBusinessCosts = parseFloat(document.getElementById("otherBusinessCosts").value) || 0;
+        const experienceYearsBusiness = parseFloat(document.getElementById("experienceYearsBusiness").value) || 0;
+        const taxationBusiness = document.getElementById("taxationBusiness").value;
+        let taxRate = 0;
+        if(taxationBusiness === "ryczalt") taxRate = 0.08;
+        else if(taxationBusiness === "liniowy") taxRate = 0.19;
+        else if(taxationBusiness === "skala") taxRate = 0.17;
+        
+        const cityBusiness = document.getElementById("cityBusiness").value;
+        let cityMultiplierBusiness = 1;
+        switch(cityBusiness) {
+          case "very-small": cityMultiplierBusiness = 1.0; break;
+          case "small": cityMultiplierBusiness = 1.1; break;
+          case "medium": cityMultiplierBusiness = 1.2; break;
+          case "large": cityMultiplierBusiness = 1.3; break;
+          case "very-large": cityMultiplierBusiness = 1.4; break;
+        }
+        
+        const businessCostMonthly = zusMonthly + accountantFee + subscriptions + equipmentAmortization + otherBusinessCosts;
+        const experienceBonus = experienceYearsBusiness * 10;
+        
+        let totalGrossSession = (sessionCostCalc + experienceBonus) * cityMultiplier;
+        totalGrossSession = Math.round(totalGrossSession);
+        let totalNetSession = Math.round(totalGrossSession * (1 - taxRate));
+        
+        // --- Dane z zakładki Koszty Życia ---
+        const rentCost = parseFloat(document.getElementById("rentCost").value) || 0;
+        const fuelCost = parseFloat(document.getElementById("fuelCost").value) || 0;
+        const foodCost = parseFloat(document.getElementById("foodCost").value) || 0;
+        const entertainmentCost = parseFloat(document.getElementById("entertainmentCost").value) || 0;
+        const billsCost = parseFloat(document.getElementById("billsCost").value) || 0;
+        const otherLivingCosts = parseFloat(document.getElementById("otherLivingCosts").value) || 0;
+        const totalLivingCosts = rentCost + fuelCost + foodCost + entertainmentCost + billsCost + otherLivingCosts;
+        
+        const totalMonthlyCosts = (businessCostMonthly * cityMultiplierBusiness) + totalLivingCosts;
+        let breakEvenSessions = totalMonthlyCosts / totalNetSession;
+        breakEvenSessions = Math.ceil(breakEvenSessions);
+        
+        // Zapis wyników do zmiennych globalnych (dla aktualizacji przy zmianie języka)
+        lastTotalGrossSession = totalGrossSession;
+        lastTotalNetSession = totalNetSession;
+        lastTotalMonthlyCosts = totalMonthlyCosts;
+        lastBreakEvenSessions = breakEvenSessions;
+        
+        // Wyświetlenie wyników z tłumaczeniem
+        document.getElementById("sessionResult").innerText = translations[currentLang].sessionResult + " " + totalGrossSession + " PLN, netto " + totalNetSession + " PLN";
+        document.getElementById("monthlyCostsResult").innerText = translations[currentLang].monthlyCostsResult + " " + totalMonthlyCosts + " PLN";
+        document.getElementById("breakEvenResult").innerText = translations[currentLang].breakEvenResult + " " + breakEvenSessions;
+        document.getElementById("result").style.display = "block";
+        
+        // --- Przygotowanie danych do wykresów ---
+        let segBase = costBase * sessionMultiplier * cityMultiplier;
+        let segZdjecia = costZdjecia * sessionMultiplier * cityMultiplier;
+        let segUjecia = costUjecia * sessionMultiplier * cityMultiplier;
+        let segPost = costPost * sessionMultiplier * cityMultiplier;
+        let segTransport = costTransport * sessionMultiplier * cityMultiplier;
+        let segLokalizacja = costLokalizacjaExtra * sessionMultiplier * cityMultiplier;
+        let segDodatkowe = costDodatkowe * sessionMultiplier * cityMultiplier;
+        let segSprzet = costSprzet * sessionMultiplier * cityMultiplier;
+        let segMaterialy = costMaterialy * sessionMultiplier * cityMultiplier;
+        let segDoswiadczenie = experienceBonus * cityMultiplier;
+        
+        const breakdownLabels = ["Bazowa stawka", "Zdjęcia", "Ujęcia", "Postprodukcja", "Transport", "Lokalizacja", "Dodatkowe usługi", "Sprzęt", "Materiały", "Doświadczenie"];
+        const breakdownValues = [segBase, segZdjecia, segUjecia, segPost, segTransport, segLokalizacja, segDodatkowe, segSprzet, segMaterialy, segDoswiadczenie];
+        
+        const monthlyLabels = ["Koszty Działalności", "Koszty Życia"];
+        const monthlyValues = [businessCostMonthly * cityMultiplierBusiness, totalLivingCosts];
+        
+        updateCharts(breakdownLabels, breakdownValues, monthlyLabels, monthlyValues);
+      }
+      
+      // Funkcja aktualizująca wykresy przy użyciu Chart.js
+      function updateCharts(breakLabels, breakValues, monthlyLabels, monthlyValues) {
+        const ctx1 = document.getElementById('chartSessionBreakdown').getContext('2d');
+        if (chartSessionBreakdown) {
+          chartSessionBreakdown.data.labels = breakLabels;
+          chartSessionBreakdown.data.datasets[0].data = breakValues;
+          chartSessionBreakdown.update();
+        } else {
+          chartSessionBreakdown = new Chart(ctx1, {
+            type: 'pie',
+            data: {
+              labels: breakLabels,
+              datasets: [{
+                label: 'Składniki kosztu sesji (PLN)',
+                data: breakValues,
+                backgroundColor: [
+                  '#ff6384',
+                  '#36a2eb',
+                  '#ffce56',
+                  '#8e44ad',
+                  '#2ecc71',
+                  '#e67e22',
+                  '#3498db',
+                  '#f1c40f',
+                  '#d35400',
+                  '#1abc9c'
+                ]
+              }]
+            },
+            options: {
+              plugins: {
+                title: {
+                  display: true,
+                  text: 'Rozkład kosztu sesji'
+                },
+                legend: {
+                  position: 'bottom'
+                }
+              }
+            }
+          });
+        }
+        
+        const ctx2 = document.getElementById('chartMonthlyCosts').getContext('2d');
+        if (chartMonthlyCosts) {
+          chartMonthlyCosts.data.labels = monthlyLabels;
+          chartMonthlyCosts.data.datasets[0].data = monthlyValues;
+          chartMonthlyCosts.update();
+        } else {
+          chartMonthlyCosts = new Chart(ctx2, {
+            type: 'pie',
+            data: {
+              labels: monthlyLabels,
+              datasets: [{
+                label: 'Miesięczne koszty (PLN)',
+                data: monthlyValues,
+                backgroundColor: ['#e74c3c', '#3498db']
+              }]
+            },
+            options: {
+              plugins: {
+                title: {
+                  display: true,
+                  text: 'Podział miesięcznych kosztów'
+                },
+                legend: {
+                  position: 'bottom'
+                }
+              }
+            }
+          });
+        }
+        
+        const ctx3 = document.getElementById('chartMonthlyBar').getContext('2d');
+        if (chartMonthlyBar) {
+          chartMonthlyBar.data.labels = monthlyLabels;
+          chartMonthlyBar.data.datasets[0].data = monthlyValues;
+          chartMonthlyBar.update();
+        } else {
+          chartMonthlyBar = new Chart(ctx3, {
+            type: 'bar',
+            data: {
+              labels: monthlyLabels,
+              datasets: [{
+                label: 'Miesięczne koszty (PLN)',
+                data: monthlyValues,
+                backgroundColor: ['#e74c3c', '#3498db']
+              }]
+            },
+            options: {
+              plugins: {
+                title: {
+                  display: true,
+                  text: 'Miesięczne koszty (wykres słupkowy)'
+                },
+                legend: {
+                  display: false
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true
+                }
+              }
+            }
+          });
+        }
+      }
+      
+      // Zapis danych do localStorage
+      function saveData() {
+        const formData = new FormData(document.getElementById('pricingForm'));
+        const data = {};
+        formData.forEach(function(value, key) {
+          data[key] = value;
+        });
+        localStorage.setItem('formData', JSON.stringify(data));
+        alert("Dane zostały zapisane!");
+      }
+      
+      // Wczytanie danych z localStorage
+      function loadData() {
+        const savedData = localStorage.getItem('formData');
+        if (savedData) {
+          const data = JSON.parse(savedData);
+          for (const key in data) {
+            const input = document.querySelector(`[name="${key}"]`);
+            if (input) {
+              input.value = data[key];
+              // Aktualizacja wyświetlacza dla pól range
+              if(input.type === "range") {
+                const displayElem = document.getElementById(input.id + "Display");
+                if(displayElem) displayElem.innerText = data[key];
+              }
+            }
+          }
+          alert("Dane zostały wczytane!");
+        } else {
+          alert("Brak zapisanych danych.");
+        }
+      }
+      
+      // Eksport danych do CSV
+      function exportToCSV() {
+        const formData = new FormData(document.getElementById('pricingForm'));
+        let csvContent = "data:text/csv;charset=utf-8,";
+        formData.forEach(function(value, key) {
+          csvContent += `${key},${value}\n`;
+        });
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "form_data.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      // Obsługa przycisków
+      document.getElementById('calculateButton').addEventListener('click', function() {
+        if (validateForm()) {
+          calculateAll();
+        }
+      });
+      document.getElementById('saveButton').addEventListener('click', saveData);
+      document.getElementById('loadButton').addEventListener('click', loadData);
+      document.getElementById('exportButton').addEventListener('click', exportToCSV);
+      
+      // Aktualizacja wyników przy zmianie języka (jeśli wyniki są już widoczne)
+      document.getElementById('languageSelector').addEventListener('change', function() {
+        const currentLang = this.value;
+        if(document.getElementById('result').style.display === "block" && lastTotalGrossSession !== null) {
+          document.getElementById("sessionResult").innerText = translations[currentLang].sessionResult + " " + lastTotalGrossSession + " PLN, netto " + lastTotalNetSession + " PLN";
+          document.getElementById("monthlyCostsResult").innerText = translations[currentLang].monthlyCostsResult + " " + lastTotalMonthlyCosts + " PLN";
+          document.getElementById("breakEvenResult").innerText = translations[currentLang].breakEvenResult + " " + lastBreakEvenSessions;
+        }
+      });
+      
+      // Obsługa tooltipów – przy najechaniu wyświetlany jest alert z podpowiedzią
+      document.querySelectorAll('.tooltip').forEach(function(tooltip) {
+        tooltip.addEventListener('mouseover', function() {
+          alert(this.getAttribute('data-tooltip'));
+        });
+      });
+      
+      // Opcjonalnie: Lazy loading wykresów (przy użyciu IntersectionObserver)
+      const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if(entry.isIntersecting && entry.target.id === "chartMonthlyBar" && chartMonthlyBar) {
+            chartMonthlyBar.update();
+          }
+        });
+      }, { threshold: 0.1 });
+      observer.observe(document.getElementById('chartSessionBreakdown'));
+      observer.observe(document.getElementById('chartMonthlyCosts'));
+      observer.observe(document.getElementById('chartMonthlyBar'));
+      
+    });
+  </script>
+</body>
+</html>
