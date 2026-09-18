@@ -10,14 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Read public HTML and asset responses
+      - name: Inspect app-host responses
         shell: python
         run: |
           import urllib.request, json
-          base = 'https://raw.githack.com/KADARstudio/WycenaSesji/seans-v02-release/film-duel/'
-          for path in ['index.html?v=020','experience-v02.js?v=020']:
+          urls = [
+            'https://raw.githack.com/KADARstudio/WycenaSesji/seans-v02-release/film-duel/index.html',
+            'https://raw.githack.com/KADARstudio/WycenaSesji/film-duel-prototype/film-duel/index.html',
+            'https://raw.githack.com/KADARstudio/WycenaSesji/seans-v02-release/film-duel/experience-v02.js?v=020']
+          for url in urls:
               try:
-                  r = urllib.request.urlopen(base+path,timeout=25)
-                  print(json.dumps({'url':r.url,'status':r.status,'headers':dict(r.headers),'body':r.read(18000).decode('utf-8','replace')},ensure_ascii=False))
+                  r = urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Seans-Prototype-Availability-Check/0.2'}),timeout=25)
+                  print(json.dumps({'url':r.url,'status':r.status,'headers':dict(r.headers),'body':r.read(20000).decode('utf-8','replace')},ensure_ascii=False))
               except Exception as e:
-                  print(str(e))
+                  print(json.dumps({'url':url,'error':str(e),'headers':dict(e.headers) if hasattr(e,'headers') else {},'body':e.read(20000).decode('utf-8','replace') if hasattr(e,'read') else ''},ensure_ascii=False))
