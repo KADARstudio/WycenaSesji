@@ -1,8 +1,7 @@
-"""Real-network mobile browser regression tests for Seans 0.2.
-Run: pip install playwright; playwright install --with-deps chromium webkit;
-python film-duel/test-v02.py. No user-account sign-in or external playback.
+"""Mobile regression tests plus an independent, real-network public delivery test.
+Install playwright==1.57.0 and its Chromium/WebKit browsers before running.
 """
-import functools, http.server, json, os, pathlib, subprocess, threading, time, traceback
+import functools, http.server, json, os, pathlib, subprocess, threading, time, traceback, sys
 from datetime import datetime, timezone
 from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -12,7 +11,6 @@ class Quiet(http.server.SimpleHTTPRequestHandler):
 server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(Quiet, directory=str(ROOT)))
 threading.Thread(target=server.serve_forever, daemon=True).start()
 URL = f'http://127.0.0.1:{server.server_port}/'
-PUBLIC = os.environ.get('SEANS_PUBLIC_URL', 'https://raw.githack.com/KADARstudio/WycenaSesji/seans-v02-release/film-duel/index.html')
 results = []
 for source in ROOT.glob('*.js'):
     subprocess.run(['node', '--check', str(source)], check=True)
@@ -38,7 +36,7 @@ with sync_playwright() as p:
         browser = getattr(p,engine).launch()
         row = {'engine':engine,'passed':False,'checks':[],'errors':[]}
         results.append(row)
-        ctx = browser.new_context(viewport={'width':390,'height':844}, device_scale_factor=1, is_mobile=True, has_touch=True, locale='pl-PL')
+        ctx = browser.new_context(viewport={'width':390,'height':844}, device_scale_factor=1, is_mobile=True, has_touch=True, locale='pl-PL', timezone_id='Europe/Warsaw')
         page = ctx.new_page(); page.on('pageerror',lambda e,r=row:r['errors'].append(str(e)))
         def ok(name, condition=True):
             assert condition, name
@@ -74,12 +72,12 @@ with sync_playwright() as p:
                 page.wait_for_function("Array.from(document.querySelectorAll('.duel img')).some(i=>i.complete && i.naturalWidth>0)",timeout=15000)
                 row['realPostersLoaded']=True
             except Exception: row['realPostersLoaded']=False
+            page.wait_for_timeout(2700)
             page.screenshot(path=str(OUT/f'{engine}-duel.png'),full_page=True)
             page.locator('[data-v02="sound"]').click()
             page.wait_for_function("SeansFX.enabled && SeansFX.state==='running'",timeout=10000)
             ok('opt-in audio starts from a user gesture')
             page.locator('[data-v02="sound"]').click()
-            before=state()['session']['elapsedMs']
             page.locator('[data-action="library"]').click()
             paused=state()['session']['elapsedMs']; page.wait_for_timeout(350)
             page.locator('[data-v02="back"]').click()
@@ -132,22 +130,18 @@ with sync_playwright() as p:
             ok('no JavaScript errors',not row['errors'])
             row['catalogueMovies']=page.evaluate('catalogue.movies.length')
             row['catalogueFetchedAt']=page.evaluate('catalogue.fetchedAt')
-            # Test the actual public URL, not only the checkout's local server.
-            public=ctx.new_page(); public.goto(PUBLIC+'?v=020',wait_until='domcontentloaded',timeout=45000)
-            public.wait_for_function("window.SeansV02?.version==='0.2.0'",timeout=45000)
-            public.wait_for_selector('[data-service="netflix"]',timeout=35000)
-            public.locator('[data-service="netflix"]').click(); public.locator('[data-action="start"]').click()
-            public.locator('.pick').first.click();public.wait_for_function('!SeansV02.busy')
-            ok('published public URL runs 0.2 and a real duel',public.evaluate('SeansV02.snapshot().game.completed===1'))
-            public.screenshot(path=str(OUT/f'{engine}-public.png'),full_page=True)
-            row['publicUrl']=PUBLIC; row['passed']=True
+            row['passed']=True
         except Exception as exc:
             row['failure']=str(exc); row['traceback']=traceback.format_exc()
             try: page.screenshot(path=str(OUT/f'{engine}-failure.png'),full_page=True)
             except Exception: pass
         finally: browser.close()
 server.shutdown()
-report={'version':'0.2.0','commit':os.environ.get('GITHUB_SHA'),'testedAt':datetime.now(timezone.utc).isoformat(),'unitTests':10,'results':results}
+# The public URL check is a separate process with its own raw HTML, screenshots
+# and HTTP diagnostics. It remains a required gate, not a skipped assertion.
+public = subprocess.run([sys.executable,str(ROOT/'check-public-v02.py')],check=False)
+public_report = ROOT/'public-test-results'/'report.json'
+report={'version':'0.2.0','commit':os.environ.get('GITHUB_SHA'),'testedAt':datetime.now(timezone.utc).isoformat(),'unitTests':10,'results':results,'publicPassed':public.returncode==0,'public':json.loads(public_report.read_text()) if public_report.exists() else None}
 (OUT/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
 print(json.dumps(report,ensure_ascii=False,indent=2))
-if not all(r['passed'] for r in results): raise SystemExit(1)
+if not all(r['passed'] for r in results) or public.returncode: raise SystemExit(1)
