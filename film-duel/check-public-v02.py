@@ -14,15 +14,21 @@ with sync_playwright() as p:
         try:
             response=page.goto(URL,wait_until='domcontentloaded',timeout=45000)
             row['initialStatus']=response.status
-            page.wait_for_timeout(2000)
+            page.wait_for_timeout(1500)
             row['initialTitle']=page.title();row['initialText']=page.locator('body').inner_text()[:12000]
             (OUT/f'{engine}-initial.html').write_text(page.content())
             page.screenshot(path=str(OUT/f'{engine}-initial.png'),full_page=True)
-            page.wait_for_function("window.SeansV02?.version==='0.2.0'",timeout=10000)
+            if page.title().startswith('External Content Notice'):
+                # Ordinary visible hosting confirmation, only for our exact app.
+                assert page.locator('#phish-dest').input_value()==URL
+                page.get_by_role('button',name='Open the page',exact=True).click()
+                row['hostingNoticeAccepted']=True
+            page.wait_for_function("window.SeansV02?.version==='0.2.0'",timeout=30000)
             page.wait_for_selector('[data-service="netflix"]',timeout=35000)
             page.locator('[data-service="netflix"]').click();page.locator('[data-action="start"]').click()
             page.locator('.pick').first.click();page.wait_for_function('!SeansV02.busy')
             assert page.evaluate('SeansV02.snapshot().game.completed===1')
+            page.screenshot(path=str(OUT/f'{engine}-duel.png'),full_page=True)
             page.locator('[data-action="finish"]').click();page.wait_for_function('!SeansV02.busy')
             assert page.locator('.session-stats').count()==1
             page.screenshot(path=str(OUT/f'{engine}-winner.png'),full_page=True)
