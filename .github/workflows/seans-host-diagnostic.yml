@@ -1,0 +1,23 @@
+name: Seans public host diagnostic
+on:
+  push:
+    branches: [seans-v02-release]
+    paths: ['.github/workflows/seans-host-diagnostic.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Read public HTML and asset responses
+        shell: python
+        run: |
+          import urllib.request, json
+          base = 'https://raw.githack.com/KADARstudio/WycenaSesji/seans-v02-release/film-duel/'
+          for path in ['index.html?v=020','experience-v02.js?v=020']:
+              try:
+                  r = urllib.request.urlopen(base+path,timeout=25)
+                  print(json.dumps({'url':r.url,'status':r.status,'headers':dict(r.headers),'body':r.read(18000).decode('utf-8','replace')},ensure_ascii=False))
+              except Exception as e:
+                  print(str(e))
