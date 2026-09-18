@@ -1,26 +1,26 @@
-name: Seans public host diagnostic
+name: Seans public delivery check
 on:
   push:
     branches: [seans-v02-release]
-    paths: ['.github/workflows/seans-host-diagnostic.yml']
+    paths: ['film-duel/check-public-v02.py', '.github/workflows/seans-host-diagnostic.yml']
 permissions:
   contents: read
 jobs:
   inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 8
     steps:
-      - name: Inspect app-host responses
-        shell: python
+      - uses: actions/checkout@v4
+      - name: Install browser tools
         run: |
-          import urllib.request, json
-          urls = [
-            'https://raw.githack.com/KADARstudio/WycenaSesji/seans-v02-release/film-duel/index.html',
-            'https://raw.githack.com/KADARstudio/WycenaSesji/film-duel-prototype/film-duel/index.html',
-            'https://raw.githack.com/KADARstudio/WycenaSesji/seans-v02-release/film-duel/experience-v02.js?v=020']
-          for url in urls:
-              try:
-                  r = urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Seans-Prototype-Availability-Check/0.2'}),timeout=25)
-                  print(json.dumps({'url':r.url,'status':r.status,'headers':dict(r.headers),'body':r.read(20000).decode('utf-8','replace')},ensure_ascii=False))
-              except Exception as e:
-                  print(json.dumps({'url':url,'error':str(e),'headers':dict(e.headers) if hasattr(e,'headers') else {},'body':e.read(20000).decode('utf-8','replace') if hasattr(e,'read') else ''},ensure_ascii=False))
+          python -m pip install playwright==1.57.0
+          python -m playwright install --with-deps chromium webkit
+      - name: Read actual public page and exercise a movie selection
+        run: python film-duel/check-public-v02.py
+      - name: Save public-page evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seans-v02-public-evidence
+          path: film-duel/public-test-results/
+          retention-days: 7
