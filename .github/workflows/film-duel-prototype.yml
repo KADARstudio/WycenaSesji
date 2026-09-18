@@ -1,0 +1,37 @@
+name: Film Duel prototype check
+on:
+  push:
+    branches: [film-duel-prototype]
+    paths: ['film-duel/**', '.github/workflows/film-duel-prototype.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify public catalogue connectivity
+        shell: python
+        run: |
+          import json, urllib.request, urllib.parse, concurrent.futures
+          q = 'query{popularTitles(country:PL,filter:{objectTypes:[MOVIE],packages:["nfx"],monetizationTypes:[FLATRATE]},first:5){edges{node{id content(country:PL,language:pl){title posterUrl fullPath}}}}}'
+          base = 'https://apis.justwatch.com/graphql'
+          target = base + '?query=' + urllib.parse.quote(q, safe='')
+          tests = [
+            ('JustWatch GET', target, None),
+            ('JustWatch POST', base, json.dumps({'query':q}).encode()),
+            ('AllOrigins JustWatch', 'https://api.allorigins.win/raw?url=' + urllib.parse.quote(target,safe=''), None),
+            ('CORS proxy JustWatch', 'https://corsproxy.io/?url=' + urllib.parse.quote(target,safe=''), None),
+            ('Movie DB API', 'https://imdb.iamidiotareyoutoo.com/justwatch?q=interstellar&country=PL', None)
+          ]
+          def check(test):
+            name,url,data = test
+            try:
+              req = urllib.request.Request(url,data=data,headers={'Origin':'https://raw.githack.com','Accept':'application/json','Content-Type':'application/json','User-Agent':'FilmDuel-PrivatePrototype/0.1'})
+              with urllib.request.urlopen(req,timeout=22) as r:
+                return name, r.status, dict(r.headers), r.read(12000).decode()
+            except Exception as e:
+              body = e.read(1000).decode(errors='replace') if hasattr(e,'read') else ''
+              return name, str(e), body
+          for result in concurrent.futures.ThreadPoolExecutor(max_workers=5).map(check,tests):
+            print(json.dumps(result,ensure_ascii=False))
