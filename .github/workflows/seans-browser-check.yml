@@ -1,0 +1,40 @@
+name: Seans mobile browser tests
+on:
+  push:
+    branches: [film-duel-prototype]
+    paths: ['film-duel/index.html', 'film-duel/app.js', 'film-duel/core.js', 'film-duel/style.css', 'film-duel/test_browser.py', '.github/workflows/seans-browser-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check delivered source integrity and JavaScript syntax
+        run: |
+          python - <<'PY'
+          import hashlib, pathlib
+          expected={'style.css':'142e70486a02b73fbe13074fb7a25076af26cf2990f9b4b702288fb9876c94b2','core.js':'38a3045f003daba741603f1f675ca078d20a4a4057825bf69c6bd0f5073ad465','app.js':'72074dcf4b5fd6e96079e5710cf8d954f9b494c35bb1fe49564260dbd1485e28','index.html':'0addabecba57c41a9075795c54ca6f92cabc542f742040e58941613d2e60a3ea'}
+          for name,expected_hash in expected.items():
+              got=hashlib.sha256((pathlib.Path('film-duel')/name).read_bytes()).hexdigest()
+              assert got==expected_hash,(name,got,expected_hash)
+              print('Verified',name,got)
+          PY
+          node --check film-duel/core.js
+          node --check film-duel/app.js
+      - name: Install browser test tools
+        run: |
+          python -m venv /tmp/seans-tests
+          /tmp/seans-tests/bin/pip install playwright
+          /tmp/seans-tests/bin/playwright install --with-deps chromium webkit
+      - name: Test phones, real posters, real catalogue, persistence and final offers
+        run: /tmp/seans-tests/bin/python film-duel/test_browser.py
+      - name: Upload visual and structured test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seans-mobile-test-results
+          path: film-duel/test-results/
+          retention-days: 7
